@@ -1,8 +1,8 @@
 let ball;
 let leftPaddle, rightPaddle;
 let paddleWidth = 15;
-let paddleHeight = 200;
-let paddleSpeed = 50;
+let paddleHeight = 100;
+let paddleSpeed = 50; // super fast paddle
 let roleSwitchTime = 10000; // 10 seconds
 let lastSwitch = 0;
 let ballControlledBy = 'player1';
@@ -15,22 +15,10 @@ let leftColor, rightColor;
 
 // Ball speed
 let baseSpeed = 7;
-let speedIncrement = 0.01;
-let maxBallSpeed = 15;
+let speedIncrement = 0.01; // slower increment
+let maxBallSpeed = 15; // maximum speed
 let ballTrail = [];
-let sparkles = [];
-
-// Sounds
-let bgSound, shiftOrangeSound, shiftBlueSound, hitOrangeSound, hitBlueSound;
-
-function preload() {
-  soundFormats('mp3', 'wav');
-  bgSound = loadSound('bg.mp3');
-  shiftOrangeSound = loadSound('shiftOrange.mp3');
-  shiftBlueSound = loadSound('shiftBlue.mp3');
-  hitOrangeSound = loadSound('hitOrange.mp3');
-  hitBlueSound = loadSound('hitBlue.mp3');
-}
+let sparkles = []; // particles for paddle hit
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
@@ -40,41 +28,31 @@ function setup() {
   
   initializeGame();
   lastSwitch = millis();
-
-  // Start background music
-  bgSound.loop();
-  bgSound.setVolume(0.5);
-  
-  // Set sound effect volumes
-  shiftOrangeSound.setVolume(0.5);
-  shiftBlueSound.setVolume(0.5);
-  hitOrangeSound.setVolume(0.5);
-  hitBlueSound.setVolume(0.5);
 }
 
 function draw() {
-  background(0, 60);
+  background(0, 60); // fade for trail effect
 
   if (!gameOver) {
+    // Draw ball trail and magical glow
     drawMagicalBall();
 
+    // Draw paddles with smooth movement
     updateAndDrawPaddle(leftPaddle, leftColor, keyIsDown(87), keyIsDown(83), ballControlledBy === 'player1');
     updateAndDrawPaddle(rightPaddle, rightColor, keyIsDown(UP_ARROW), keyIsDown(DOWN_ARROW), ballControlledBy === 'player2');
 
+    // Draw sparkles
     updateSparkles();
 
-    // Score display
+    // Draw scores
     textSize(32);
     textAlign(CENTER);
     fill(255);
     text(scoreLeft + " : " + scoreRight, width / 2, 50);
 
-    // Role switching with sound
+    // Role switching
     if (millis() - lastSwitch > roleSwitchTime) {
-      let newController = ballControlledBy === 'player1' ? 'player2' : 'player1';
-      if (newController === 'player2') shiftOrangeSound.play();
-      else shiftBlueSound.play();
-      ballControlledBy = newController;
+      ballControlledBy = ballControlledBy === 'player1' ? 'player2' : 'player1';
       lastSwitch = millis();
     }
 
@@ -105,21 +83,16 @@ function draw() {
     // Bounce top/bottom
     if (ball.y <= 0 || ball.y >= height) ball.vy *= -1;
 
-    // Paddle collisions with sound
+    // Paddle collisions
     if (ball.x - 10 <= leftPaddle.x + paddleWidth && ball.y >= leftPaddle.y && ball.y <= leftPaddle.y + paddleHeight) {
       ball.vx *= -1;
       leftPaddle.glow = 200;
       createSparkles(ball.x, ball.y, leftColor);
-      if (ballControlledBy === 'player1') hitBlueSound.play();
-      else hitOrangeSound.play();
     }
-
     if (ball.x + 10 >= rightPaddle.x && ball.y >= rightPaddle.y && ball.y <= rightPaddle.y + paddleHeight) {
       ball.vx *= -1;
       rightPaddle.glow = 200;
       createSparkles(ball.x, ball.y, rightColor);
-      if (ballControlledBy === 'player1') hitBlueSound.play();
-      else hitOrangeSound.play();
     }
 
     // Reduce paddle glow
@@ -136,7 +109,7 @@ function draw() {
       resetBall();
     }
 
-    // Win condition
+    // Check win condition (first to 10)
     if (scoreLeft >= 10 || scoreRight >= 10) {
       gameOver = true;
     }
@@ -154,6 +127,7 @@ function draw() {
   }
 }
 
+// Restart game on ENTER
 function keyPressed() {
   if (gameOver && keyCode === ENTER) {
     scoreLeft = 0;
@@ -163,9 +137,11 @@ function keyPressed() {
   }
 }
 
+// Smooth paddle movement and glow (with screen limits and control lock)
 function updateAndDrawPaddle(p, col, upKey, downKey, isControlled) {
   let targetY = p.y;
 
+  // Only allow movement if player does NOT control the ball
   if (!isControlled) {
     if (upKey) targetY -= paddleSpeed;
     if (downKey) targetY += paddleSpeed;
@@ -174,6 +150,7 @@ function updateAndDrawPaddle(p, col, upKey, downKey, isControlled) {
   p.y = lerp(p.y, targetY, 0.3);
   p.y = constrain(p.y, 0, height - paddleHeight);
 
+  // Draw glow
   noStroke();
   for (let i = 3; i > 0; i--) {
     fill(red(col), green(col), blue(col), (p.glow / i));
@@ -184,9 +161,11 @@ function updateAndDrawPaddle(p, col, upKey, downKey, isControlled) {
   rect(p.x, p.y, paddleWidth, paddleHeight);
 }
 
+// Draw ball with magical trail
 function drawMagicalBall() {
   let ballColor = ballControlledBy === 'player1' ? leftColor : rightColor;
   
+  // Add trail
   ballTrail.push({x: ball.x, y: ball.y, c: ballColor, size: 20 + random(5,10), alpha: 150});
   for (let t of ballTrail) {
     noStroke();
@@ -197,6 +176,7 @@ function drawMagicalBall() {
   }
   ballTrail = ballTrail.filter(t => t.alpha > 0);
 
+  // Glow layers
   noStroke();
   for (let r = 30; r >= 6; r -= 2) {
     let alpha = map(r, 6, 30, 200, 10);
@@ -208,6 +188,7 @@ function drawMagicalBall() {
   ellipse(ball.x, ball.y, 20, 20);
 }
 
+// Sparkles
 function createSparkles(x, y, col) {
   for (let i = 0; i < 15; i++) {
     sparkles.push({

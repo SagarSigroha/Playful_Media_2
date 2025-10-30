@@ -1,11 +1,3 @@
-/*
-  Windows of Light — Final Sound Version
-  ----------------------------------------
-  ✦ Background sad tune
-  ✦ Footsteps when moving
-  ✦ Family celebration sounds on window clicks
-*/
-
 let buildings = [];
 let numBuildings = 10;
 let scrollX = 0;
@@ -41,21 +33,8 @@ let introCompleteTime = 0;
 let skyTop, skyBottom;
 let serifFont, sansFont;
 
-let memories = [
-  "Maa making gujiya...",
-  "Papa fixing fairy lights...",
-  "Sister teasing me...",
-  "Cleaning and laughter...",
-  "Smell of sweets...",
-  "Puja bell ringing...",
-  "Dinner together...",
-  "Crackers echoing...",
-  "Dancing in the courtyard...",
-  "Home’s warmth..."
-];
-
-// -------------------- SOUND --------------------
-let bgMusic, footstep;
+// sounds
+let bgMusic, footstep, crackers;
 let familySounds = [];
 let soundIndex = 0;
 let soundOrder = [];
@@ -65,11 +44,13 @@ function preload() {
   serifFont = 'Georgia';
   sansFont = 'Helvetica';
 
-  soundFormats('mp3'); // use mp3 only
+  soundFormats('mp3'); // all mp3
 
   bgMusic = loadSound('props/bg.mp3');
+  crackers = loadSound('props/crackers.mp3'); // 
   footstep = loadSound('props/footstep.mp3');
 
+  // load all 14 family sounds
   for (let i = 1; i <= 14; i++) {
     familySounds.push(loadSound('props/s' + i + '.mp3'));
   }
@@ -85,8 +66,7 @@ function setup() {
   for (let i = 0; i < numBuildings; i++) {
     let h = random(420, 650);
     buildings.push(new Building(xPos, h));
-    if (i === 0) xPos += 320;
-    else xPos += random(460, 780);
+    xPos += random(460, 780);
   }
 
   noCursor();
@@ -101,9 +81,17 @@ function setup() {
 
   soundOrder = shuffle(Array.from(Array(14).keys()));
 
+  // play background + crackers
   bgMusic.setLoop(true);
-  bgMusic.setVolume(0.5);
+  bgMusic.setVolume(0.3); // softer
   bgMusic.play();
+
+  crackers.setLoop(true);
+  crackers.setVolume(0.2); // faint background
+  crackers.play();
+
+  // reduce all family sounds to half volume
+  for (let s of familySounds) s.setVolume(0.5);
 }
 
 // -------------------- DRAW --------------------
@@ -186,7 +174,7 @@ function draw() {
   drawInstructions();
 }
 
-// -------------------- MOUSE CLICK --------------------
+// -------------------- CLICK --------------------
 function mousePressed() {
   if (introActive || ending) return;
   let wx = mouseX + scrollX;
@@ -205,6 +193,7 @@ function mousePressed() {
         ending = true;
         showFinalLine = true;
         bgMusic.setVolume(0.25, 2);
+        crackers.setVolume(0.2, 2);
       }
       return;
     }
@@ -216,7 +205,7 @@ class Building {
   constructor(x, h) {
     this.x = x;
     this.h = h;
-    this.y = height - h - 60;
+    this.y = height - h - 56;
     this.w = int(random(200, 260));
     this.windows = [];
 
@@ -286,21 +275,21 @@ class Win {
     this.x = x; this.y = y; this.w = w; this.h = h;
     this.lit = random() < 0.6;
     this.alpha = this.lit ? random(180, 230) : random(30, 80);
-    this.text = ""; this.textAlpha = 0; this.clickedOnce = false;
+    this.clickedOnce = false;
   }
   update() {
     if (random() < 0.008) this.lit = !this.lit;
     this.alpha = lerp(this.alpha, this.lit ? 220 : 40, 0.04);
-    this.textAlpha = max(0, this.textAlpha - 2);
   }
   display() {
     fill(255, 220, 100, this.alpha);
     rect(this.x, this.y, this.w, this.h, 4);
   }
   contains(px, py) { return px >= this.x && px <= this.x + this.w && py >= this.y && py <= this.y + this.h; }
-  showMemory() { this.textAlpha = 255; }
+  showMemory() {}
 }
 
+// -------------------- EFFECTS --------------------
 class Firework {
   constructor(x, y) {
     this.x = x; this.y = y;
@@ -398,9 +387,10 @@ function drawInstructions() {
   textFont(sansFont);
   textSize(18);
   textAlign(CENTER, BOTTOM);
-  text("← → Move | Click glowing windows to share light...", width / 2, height - 15);
+  text("← → Move | Click glowing windows to hear memories...", width / 2, height - 15);
 }
 
+// -------------------- Diya --------------------
 function drawCursorDiya(x, y, s) {
   push();
   translate(x, y);
@@ -440,6 +430,7 @@ function drawFlame(x, y, s) {
   pop();
 }
 
+// -------------------- Intro --------------------
 function drawIntro() {
   background(0);
   if (!introTypedComplete) {
